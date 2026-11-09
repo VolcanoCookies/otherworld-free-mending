@@ -1,0 +1,22 @@
+when:
+  - event: [push, tag]
+
+steps:
+  - name: build
+    image: docker.io/library/eclipse-temurin:17-jdk-jammy@sha256:057a0daec60e87c96571bf5c9c7792065bcb19e804d584cd37d4144038a35717
+    environment:
+      GRADLE_USER_HOME: .gradle-ci
+    commands:
+      - ./gradlew --no-daemon build
+
+  - name: release
+    image: docker.io/woodpeckerci/plugin-release:1.0.0@sha256:13277e795ac97a41e0e89a0b001e31a561baff912dcfe272a267bee0dda08fa1
+    depends_on: [build]
+    when:
+      - event: tag
+    settings:
+      api_key:
+        from_secret: github_release_token
+      files:
+        - build/libs/otherworld-free-mending-*.jar
+      generate_release_notes: true

@@ -1,0 +1,33 @@
+plugins {
+    id 'java'
+}
+
+version = providers.environmentVariable('CI_COMMIT_TAG')
+        .map { it.replaceAll(/[^a-zA-Z0-9._+-]/, '-') }
+        .getOrElse('0.0.1')
+
+repositories {
+    maven {
+        url = 'https://maven.minecraftforge.net'
+    }
+}
+
+dependencies {
+    // Forge supplies Mixin at runtime. The injector references only unmapped members.
+    compileOnly('org.spongepowered:mixin:0.8.5') {
+        transitive = false
+    }
+}
+
+tasks.withType(JavaCompile).configureEach {
+    options.release = 17
+}
+
+tasks.named('jar', Jar) {
+    manifest {
+        attributes(
+            'Implementation-Version': project.version,
+            'MixinConfigs': 'otherworldfreemending.mixins.json'
+        )
+    }
+}
