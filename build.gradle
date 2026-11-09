@@ -4,7 +4,7 @@ plugins {
 
 version = providers.environmentVariable('CI_COMMIT_TAG')
         .map { it.replaceAll(/[^a-zA-Z0-9._+-]/, '-') }
-        .getOrElse('0.0.1')
+        .getOrElse('0.0.2')
 
 repositories {
     maven {
@@ -30,4 +30,24 @@ tasks.named('jar', Jar) {
             'MixinConfigs': 'otherworldfreemending.mixins.json'
         )
     }
+}
+
+def modJar = tasks.named('jar', Jar).flatMap { it.archiveFile }
+
+tasks.register('verifyPackMetadata') {
+    inputs.file(modJar)
+    doLast {
+        new java.util.zip.ZipFile(modJar.get().asFile).withCloseable { jar ->
+            def entry = jar.getEntry('pack.mcmeta')
+            assert entry != null : 'Forge requires pack.mcmeta in the mod JAR'
+
+            def metadata = new groovy.json.JsonSlurper().parse(jar.getInputStream(entry))
+            assert metadata.pack?.pack_format == 15 && metadata.pack?.description :
+                    'pack.mcmeta must declare a Minecraft 1.20.1 pack'
+        }
+    }
+}
+
+tasks.named('check') {
+    dependsOn('verifyPackMetadata')
 }
